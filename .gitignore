@@ -1,7 +1,9 @@
 # mine
 logs/
 .idea/
-
+torch/.idea/
+torch/.vector_cache/
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

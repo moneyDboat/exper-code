@@ -14,15 +14,18 @@ class DefaultConfig(object):
     evaluation_interval = 1
     batch_size = 128
     epochs = 50
-    sentence_len = 50
+    max_text_len = 50
     task = 'Sentihood'
     seed = 777
-    data_dir = '../data/sentihood'
+    data_dir = '../data/sentihood/'
     opt = 'ftrl'
-    embedding_path = '../data/glove.6B.300d.txt'
+    # 直接使用torchtext.vocab.Glove通过url自动下载，无需自己下载
+    # embedding_path = '../data/glove.6B.300d.txt'
+    embedding_name = '6B'
     embedding_update = False
     case_folding = True
 
+    vocab_size = 0
     n_keys = 7
     n_tied = 2
     entnet_input_keep_prob = 0.8

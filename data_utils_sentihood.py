@@ -102,6 +102,7 @@ def lower_case(data):
 
 
 # 提取json原始数据集
+# 保存所有的aspect
 def parse_sentihood_json(in_file):
     with open(in_file) as f:
         data = json.load(f)
@@ -129,6 +130,7 @@ def get_all_aspects(data):
     return aspects
 
 
+# 对aspect进行筛选
 # 只保留4个top aspect(all_aspect)
 def convert_input(data, all_aspects):
     ret = []

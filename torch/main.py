@@ -10,20 +10,21 @@ import torch
 import torch.nn.functional as F
 from config import DefaultConfig
 import fire
+import data
 
 
 def main(**kwargs):
-    args = DefaultConfig()
-    args.parse(kwargs)
+    config = DefaultConfig()
+    config.parse(kwargs)
     if not torch.cuda.is_available():
-        args.cuda = False
-        args.device = None
-        torch.manual_seed(args.seed)
+        config.cuda = False
+        config.device = None
+        torch.manual_seed(config.seed)
 
-    # 只考虑4个top aspect
-    aspect2idx = {
-        'general': 0,
-        'price': 1,
-        'transit-location': 2,
-        'safety': 3
-    }
+    train_iter, val_iter, test_iter, config.vocab_size, vectors = data.load_data(config)
+    print(config.vocab_size)
+    print('Done')
+
+
+if __name__ == '__main__':
+    fire.Fire()
