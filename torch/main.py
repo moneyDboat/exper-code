@@ -22,8 +22,8 @@ def main(**kwargs):
         torch.manual_seed(config.seed)
 
     train_iter, val_iter, test_iter, config.vocab_size, vectors = data.load_data(config)
-    print(config.vocab_size)
-    print('Done')
+
+    config.print_config()
 
 
 if __name__ == '__main__':

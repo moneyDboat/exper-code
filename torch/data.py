@@ -29,11 +29,17 @@ class SentiDataset(data.Dataset):
         print('read data from {}'.format(path))
 
         # 只考虑4个top aspect
+        # to index
         aspect2idx = {
             'general': 0,
             'price': 1,
             'transit-location': 2,
             'safety': 3
+        }
+        senti2idx = {
+            'Positive': 0,
+            'Negative': 1,
+            'None': 2
         }
 
         # 从json中加载数据
@@ -46,8 +52,10 @@ class SentiDataset(data.Dataset):
                     aspect = opinion['aspect']
                     target = opinion['target_entity']
                     if aspect in aspect2idx.keys():
-                        examples.append(data.Example.fromlist([text, target, aspect, sentiment], fields))
+                        examples.append(
+                            data.Example.fromlist([text, target, aspect2idx[aspect], senti2idx[sentiment]], fields))
 
+        print('len of data in {} is : {}'.format(path, len(examples)))
         super(SentiDataset, self).__init__(examples, fields, **kwargs)
 
 
