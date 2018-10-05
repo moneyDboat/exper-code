@@ -167,11 +167,13 @@ class DynamicMemoryCell(tf.contrib.rnn.RNNCell):
 
                 # Equation 6: h_j <- h_j / \norm{h_j}
                 # Forget previous memories by normalization.
+                # 计算欧几里得范数，即向量的平方和开方的结果
                 state_j_next_norm = tf.norm(
                     tensor=state_j_next,
                     ord='euclidean',
                     axis=-1,
                     keep_dims=True)
+                # 这段代码不知道有什么意义
                 state_j_next_norm = tf.where(
                     tf.greater(state_j_next_norm, 0.0),
                     state_j_next_norm,
@@ -362,7 +364,7 @@ class Delayed_EntNet_Sentihood(object):
         )
         return embedding * embedding_mask  # [0,1,1,1,...,1]
 
-    # 模型的关键
+    # 模型的关键部分
     def _inference_adj(self, sentences, targets, aspects,
                        entnet_input_keep_prob, entnet_output_keep_prob,
                        entnet_state_keep_prob, final_layer_keep_prob):

@@ -22,10 +22,20 @@ class DefaultConfig(object):
     # 直接使用torchtext.vocab.Glove通过url自动下载，无需自己下载
     # embedding_path = '../data/glove.6B.300d.txt'
     embedding_name = '6B'
+    embedding_dim = 300
     embedding_update = False
     case_folding = True
+    label_num = 2
+
+    save_dir = 'tmp'
+    id = 'test'
+    lr1 = 1e-5
+    lr2 = 2e-4  # learning rate for embedding
+    max_epoch = 500
 
     vocab_size = 0
+    target_vocab_size = 0
+    aspect_vocab_size = 0
     n_keys = 7
     n_tied = 2
     entnet_input_keep_prob = 0.8

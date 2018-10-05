@@ -53,7 +53,7 @@ class SentiDataset(data.Dataset):
                     target = opinion['target_entity']
                     if aspect in aspect2idx.keys():
                         examples.append(
-                            data.Example.fromlist([text, target, aspect2idx[aspect], senti2idx[sentiment]], fields))
+                            data.Example.fromlist([text, target, aspect, senti2idx[sentiment]], fields))
 
         print('len of data in {} is : {}'.format(path, len(examples)))
         super(SentiDataset, self).__init__(examples, fields, **kwargs)
@@ -61,8 +61,8 @@ class SentiDataset(data.Dataset):
 
 def load_data(config):
     TEXT = data.Field(sequential=True, fix_length=config.max_text_len)
-    TARGET = data.Field(sequential=False, use_vocab=False)  # 'Location1' 或者 'Location2'
-    ASPECT = data.Field(sequential=False, use_vocab=False)  # aspect对应的index
+    TARGET = data.Field(sequential=False, use_vocab=True)  # 'Location1' 或者 'Location2'
+    ASPECT = data.Field(sequential=False, use_vocab=True)
     LABEL = data.Field(sequential=False, use_vocab=False)
 
     train_path = config.data_dir + 'sentihood-train.json'
@@ -81,9 +81,12 @@ def load_data(config):
     print('load glove {} vectors from url'.format(config.embedding_name))
     vectors.unk_init = init.xavier_uniform_  # 没有命中的token的初始化方式
 
-    # 构建Vocab
+    # 构建Vocab(target和aspect也需要单独构建)
+    # 这样单独构建词向量其实是有问题的，aspect的词汇和text有一定关联，这样单独构建失去了这样的关联
     print('building vocabulary......')
     TEXT.build_vocab(train, val, test, min_freq=5, vectors=vectors)
+    TARGET.build_vocab(train, val, test, vectors=vectors)
+    ASPECT.build_vocab(train, val, test, vectors=vectors)
 
     # 构建Iterator
     train_iter = data.BucketIterator(dataset=train, batch_size=config.batch_size, shuffle=True, sort_within_batch=False,
@@ -93,4 +96,5 @@ def load_data(config):
     test_iter = data.Iterator(dataset=test, batch_size=config.batch_size, shuffle=False, sort=False, repeat=False,
                               device=config.device)
 
-    return train_iter, val_iter, test_iter, len(TEXT.vocab), TEXT.vocab.vectors
+    return train_iter, val_iter, test_iter, len(TEXT.vocab), len(TARGET.vocab), len(ASPECT.vocab), \
+           TEXT.vocab.vectors, TARGET.vocab.vectors, ASPECT.vocab.vectors
