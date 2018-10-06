@@ -38,8 +38,7 @@ class SentiDataset(data.Dataset):
         }
         senti2idx = {
             'Positive': 0,
-            'Negative': 1,
-            'None': 2
+            'Negative': 1
         }
 
         # 从json中加载数据

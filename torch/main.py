@@ -24,28 +24,28 @@ def main(**kwargs):
         torch.manual_seed(config.seed)
 
     train_iter, val_iter, test_iter, config.vocab_size, config.target_vocab_size, config.aspect_vocab_size, \
-        text_vectors, target_vectors, aspect_vectors = data.load_data(config)
+    text_vectors, target_vectors, aspect_vectors = data.load_data(config)
     # 需要进一步处理样本不均衡
 
     config.print_config()
 
-    # # init model
-    # model = EntNet(config, text_vectors, target_vectors, aspect_vectors)
-    # print(model)
-    #
-    # # 模型保存位置
-    # if not os.path.exists(config.save_dir):
-    #     os.mkdir(config.save_dir)
-    # save_path = os.path.join(config.save_dir, 'entnet_{}.pth'.format(config.id))
-    #
-    # if config.cuda:
-    #     torch.cuda.set_device(config.device)
-    #     torch.cuda.manual_seed(config.seed)  # set random seed for gpu
-    #     model.cuda()
-    #
-    # # 目标函数和优化器
-    # criterion = F.cross_entropy
-    # optimizer = None
+    # init model
+    model = EntNet(config, text_vectors, target_vectors, aspect_vectors)
+    print(model)
+
+    # 模型保存位置
+    if not os.path.exists(config.save_dir):
+        os.mkdir(config.save_dir)
+    save_path = os.path.join(config.save_dir, 'entnet_{}.pth'.format(config.id))
+
+    if config.cuda:
+        torch.cuda.set_device(config.device)
+        torch.cuda.manual_seed(config.seed)  # set random seed for gpu
+        model.cuda()
+
+    # 目标函数和优化器
+    criterion = F.cross_entropy
+    optimizer = model.get_optimizer(config.lr1, config.lr2)
 
     # 开始训练
     for i in range(config.max_epoch):
@@ -63,11 +63,20 @@ def main(**kwargs):
             optimizer.zero_grad()
             pred = model(text, target, aspect)
             loss = criterion(pred, label)
-            loss.backward()
+            print(loss)
+            loss.backward(retain_graph=True)
             optimizer.step()
 
             # 更新统计指标
-            pass
+            total_loss += loss.item()
+            predicted = pred.max(1)[1]
+            total += label.size(0)
+            correct += predicted.eq(label).sum().item()
+
+            if idx % 5 == 4:
+                print('[{}, {}] loss: {:.3f} | Acc: {:.3f}%({}/{})'.format(i + 1, idx + 1, total_loss / 5,
+                                                                           100. * correct / total, correct, total))
+                total_loss = 0.0
 
         # 计算验证集上的分数，并相应调整学习率
         pass

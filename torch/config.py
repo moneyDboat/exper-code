@@ -29,8 +29,8 @@ class DefaultConfig(object):
 
     save_dir = 'tmp'
     id = 'test'
-    lr1 = 1e-5
-    lr2 = 2e-4  # learning rate for embedding
+    lr1 = 1e-3
+    lr2 = 0  # learning rate for embedding
     max_epoch = 500
 
     vocab_size = 0
