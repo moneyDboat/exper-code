@@ -41,13 +41,17 @@ class EntNet(nn.Module):
 
         # final classifier
         self.W_att = nn.Parameter(torch.randn(config.embedding_dim, config.embedding_dim * 2))  # 300*600
-        self.c1 = nn.Linear(config.embedding_dim, config.embedding_dim)
+        self.c1 = nn.Linear(config.embedding_dim * 2, config.embedding_dim)
         self.bn = nn.BatchNorm1d(config.embedding_dim)
         self.relu = nn.ReLU(inplace=True)
         self.c2 = nn.Linear(config.embedding_dim, config.label_num)
 
         # test
-        self.cell = nn.GRUCell(config.embedding_dim, config.embedding_dim)
+        self.bigru = nn.GRU(
+            input_size=config.embedding_dim,
+            hidden_size=config.embedding_dim,
+            bidirectional=True
+        )
 
     def forward(self, text, target, aspect):
         # text: 50 * 128
@@ -71,27 +75,28 @@ class EntNet(nn.Module):
         h_bw = torch.randn(batch_size, self.config.embedding_dim)
         b_bw = torch.randn(batch_size, self.config.embedding_dim)
         h_fw = Variable(torch.zeros(batch_size, self.config.embedding_dim))
-        for text in text_embed:
-            h_fw = self.cell(text, h_fw)
+
+        h_fw = self.bigru(text_embed)[1]
+        h_fw = h_fw.permute(1, 0, 2).reshape(batch_size, -1)  # batch * 600
+        # for text in text_embed:
             # h_fw, b_fw = self.ent_cell_fw(text, h_fw, b_fw, keys_emb)
             # 双向后面再改
             # h_bw, b_bw = self.ent_cell_bw(h_bw, b_bw)
 
-        h_fw = [h_fw, h_fw]
         # p_j = softmax(k_j W_att [t a])
-        last_h_fw = torch.cat([h.unsqueeze(1) for h in h_fw], dim=1)  # 128 * 7 * 300
-        target_aspect = torch.cat([target_embed, aspect_embed], dim=1)  # 128 * 600
-
-        att = torch.mm(keys_emb, self.W_att)
-        att = torch.mm(att, target_aspect.permute(1, 0)).permute(1, 0)  # 128 * 7
-        att = F.softmax(att, dim=1)
-
-        u = torch.sum(last_h_fw * att.unsqueeze(2), dim=1)  # 128 * 300
+        # last_h_fw = torch.cat([h.unsqueeze(1) for h in h_fw], dim=1)  # 128 * 7 * 300
+        # target_aspect = torch.cat([target_embed, aspect_embed], dim=1)  # 128 * 600
+        #
+        # att = torch.mm(keys_emb, self.W_att)
+        # att = torch.mm(att, target_aspect.permute(1, 0)).permute(1, 0)  # 128 * 7
+        # att = F.softmax(att, dim=1)
+        #
+        # u = torch.sum(last_h_fw * att.unsqueeze(2), dim=1)  # 128 * 300
 
         last_h_fw = h_fw  # 128 * 300
 
         # y = softmax(R (H u + a))
-        hidden = self.c1(u)
+        hidden = self.c1(h_fw)
         hidden = hidden + aspect_embed
         hidden = self.relu(self.bn(hidden))
         logit = self.c2(hidden)  # 128 * 2

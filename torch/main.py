@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 from config import DefaultConfig
 from model import EntNet
+from model import Bigru
 import fire
 import data
 import os
@@ -30,7 +31,8 @@ def main(**kwargs):
     config.print_config()
 
     # init model
-    model = EntNet(config, text_vectors, target_vectors, aspect_vectors)
+    # model = EntNet(config, text_vectors, target_vectors, aspect_vectors)
+    model = Bigru(config, text_vectors)
     print(model)
 
     # 模型保存位置
@@ -57,7 +59,7 @@ def main(**kwargs):
         correct = 0
         total = 0
 
-        # model.train()
+        model.train()
 
         for idx, batch in enumerate(train_iter):
             text, target, aspect, label = batch.text, batch.target, batch.aspect, batch.label
@@ -83,23 +85,23 @@ def main(**kwargs):
         # 计算验证集上的分数(准确率)，并相应调整学习率
         acc, acc_n, val_n = val(model, val_iter, config)
         print('Epoch {} Val Acc: {:.3f}%({}/{})'.format(i+1, acc, acc_n, val_n))
-        if acc >= best_acc:
-            best_acc = acc
-            checkpoint = {
-                'state_dict': model.state_dict(),
-                'config': config
-            }
-            torch.save(checkpoint, tmp_save_path)
-            # print('Best tmp model acc: {:.3f}%'.format(best_acc))
-        if acc < best_acc:
-            model.load_state_dict(torch.load(tmp_save_path)['state_dict'])
-            lr1 *= config.lr_delay
-            optimizer = model.get_optimizer(lr1, lr2)
-            print('## load previous best model: {:.3f}%'.format(best_acc))
-            print('## set model lr1 to {}'.format(lr1))
-            if lr1 < config.min_lr:
-                print('## training over, best f1 acc : {:.3f}'.format(best_acc))
-                break
+        # if acc >= best_acc:
+        #     best_acc = acc
+        #     checkpoint = {
+        #         'state_dict': model.state_dict(),
+        #         'config': config
+        #     }
+        #     torch.save(checkpoint, tmp_save_path)
+        #     # print('Best tmp model acc: {:.3f}%'.format(best_acc))
+        # if acc < best_acc:
+        #     model.load_state_dict(torch.load(tmp_save_path)['state_dict'])
+        #     lr1 *= config.lr_delay
+        #     optimizer = model.get_optimizer(lr1, lr2)
+        #     print('## load previous best model: {:.3f}%'.format(best_acc))
+        #     print('## set model lr1 to {}'.format(lr1))
+        #     if lr1 < config.min_lr:
+        #         print('## training over, best f1 acc : {:.3f}'.format(best_acc))
+        #         break
 
         # 计算测试集上分数(准确率)
         test_acc, test_acc_n, test_n = val(model, test_iter, config)

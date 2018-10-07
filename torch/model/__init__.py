@@ -7,3 +7,5 @@
 """
 
 from .entnet import EntNet
+from .Bigru import Bigru
+
