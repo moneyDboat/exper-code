@@ -29,9 +29,9 @@ class DefaultConfig(object):
 
     save_dir = 'tmp'
     id = 'test'
-    lr1 = 5e-3
+    lr1 = 1e-2
     lr2 = 0  # learning rate for embedding
-    lr_delay = 0.5
+    lr_delay = 0.9
     min_lr = 1e-6  # 衰减到最小学习率时退出训练
     max_epoch = 500
 

@@ -82,7 +82,7 @@ def main(**kwargs):
 
         # 计算验证集上的分数(准确率)，并相应调整学习率
         acc, acc_n, val_n = val(model, val_iter, config)
-        print('Epoch {} Val Acc: {:.3f}%({}/{})'.format(i, acc, acc_n, val_n))
+        print('Epoch {} Val Acc: {:.3f}%({}/{})'.format(i+1, acc, acc_n, val_n))
         if acc >= best_acc:
             best_acc = acc
             checkpoint = {
@@ -90,12 +90,12 @@ def main(**kwargs):
                 'config': config
             }
             torch.save(checkpoint, tmp_save_path)
-            print('Best tmp model acc: {:.3f}'.format(best_acc))
+            # print('Best tmp model acc: {:.3f}%'.format(best_acc))
         if acc < best_acc:
             model.load_state_dict(torch.load(tmp_save_path)['state_dict'])
             lr1 *= config.lr_delay
             optimizer = model.get_optimizer(lr1, lr2)
-            print('## load previous best model: {:.3f}'.format(best_acc))
+            print('## load previous best model: {:.3f}%'.format(best_acc))
             print('## set model lr1 to {}'.format(lr1))
             if lr1 < config.min_lr:
                 print('## training over, best f1 acc : {:.3f}'.format(best_acc))
@@ -103,7 +103,7 @@ def main(**kwargs):
 
         # 计算测试集上分数(准确率)
         test_acc, test_acc_n, test_n = val(model, test_iter, config)
-        print('Epoch {} Test Acc: {:.3f}%({}/{}'.format(i, test_acc, test_acc_n, test_n))
+        print('Epoch {} Test Acc: {:.3f}%({}/{})'.format(i+1, test_acc, test_acc_n, test_n))
 
     # 计算最终训练模型的测试集准确率
     # 并保存模型

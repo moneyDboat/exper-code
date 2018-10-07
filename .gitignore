@@ -3,6 +3,7 @@ logs/
 .idea/
 torch/.idea/
 torch/.vector_cache/
+torch/tmp/
 data/
 
 # Byte-compiled / optimized / DLL files
