@@ -253,6 +253,7 @@ class Delayed_EntNet_Sentihood(object):
         )
 
         # l2 regularization
+        # l2正则
         trainable_variables = tf.trainable_variables()
         l2_loss_final_layer = 0.0
         assert self._l2_final_layer >= 0
@@ -442,6 +443,7 @@ class Delayed_EntNet_Sentihood(object):
             )
             initial_state_fw = cell_fw.zero_state(batch_size, tf.float32)
             sentences_emb_shape = sentences_emb.get_shape()
+            # DropoutWrapper需要关注一下
             cell_fw = tf.contrib.rnn.DropoutWrapper(
                 # 仅仅在不同的循环层之间使用 operator adding dropout to inputs and outputs of the given cell
                 cell=cell_fw,
@@ -525,6 +527,7 @@ class Delayed_EntNet_Sentihood(object):
             # [None, n_keys, emb_size * 2]
             attention = tf.reduce_sum(temp * asp_att, axis=2)
             # [None, n_keys]
+            # 为何减去最大值？
             attention_max = tf.reduce_max(attention, axis=-1, keep_dims=True)
             # [None, 1]
             attention = tf.nn.softmax(attention - attention_max)

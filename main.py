@@ -288,12 +288,14 @@ if __name__ == "__main__":
             logger.info('Test Accuracy: %f' % test_acc)
             logger.info('-----------------------')
 
+        # 开始训练
         for t in range(1, FLAGS.epochs + 1):
             np.random.shuffle(batches)
             total_cost = 0.0
             total_training_instances = 0
 
             for start, end in batches:
+                # 类别不平衡处理
                 # train negative
                 # for balance by sampling the same number of training instances within a batch randomly from each class
                 sentences = train_negative_sentences[start:end]

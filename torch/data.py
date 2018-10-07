@@ -45,7 +45,8 @@ class SentiDataset(data.Dataset):
         with open(path) as f:
             json_data = json.load(f)
             for json_item in json_data:
-                text = json_item['text']
+                # 全部转换成小写
+                text = json_item['text'].lower()
                 for opinion in json_item['opinions']:
                     sentiment = opinion['sentiment']
                     aspect = opinion['aspect']

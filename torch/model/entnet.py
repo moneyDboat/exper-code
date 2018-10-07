@@ -10,6 +10,7 @@ import torch.nn as nn
 import math
 import numpy as np
 from config import DefaultConfig
+from torch.autograd import Variable
 import torch.nn.functional as F
 
 
@@ -29,18 +30,14 @@ class EntNet(nn.Module):
         if aspect_vectors is not None:
             self.aspect_embedding.weight.data.copy_(aspect_vectors)
 
-        tired_keys = torch.LongTensor([1, 2])  # ['Location1', 'Location2']
-        tired_keys_embed = self.target_embedding(tired_keys)  # 2 * 300
         # 5*300，训练过程中会不断更新
-        self.free_keys_embed = nn.Parameter(
-            torch.randn((self.config.n_keys - self.config.n_tied), self.config.embedding_dim))
-        keys_emb = torch.cat([tired_keys_embed, self.free_keys_embed], dim=0)  # 7* 300
-        self.keys = keys_emb
+        # 先不用
+        # self.free_keys_embed = nn.Parameter(torch.randn((self.config.n_keys - self.config.n_tied), 
+        # self.config.embedding_dim))
 
         # 前向和后向
-        self.ent_cell_fw = EntNetCell(config.n_keys, config.embedding_dim, self.keys)
-        self.ent_cell_bw = EntNetCell(config.n_keys, config.embedding_dim, self.keys)
-
+        self.ent_cell_fw = EntNetCell(config.n_keys, config.embedding_dim)
+        self.ent_cell_bw = EntNetCell(config.n_keys, config.embedding_dim)
 
         # final classifier
         self.W_att = nn.Parameter(torch.randn(config.embedding_dim, config.embedding_dim * 2))  # 300*600
@@ -49,34 +46,49 @@ class EntNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.c2 = nn.Linear(config.embedding_dim, config.label_num)
 
+        # test
+        self.cell = nn.GRUCell(config.embedding_dim, config.embedding_dim)
+
     def forward(self, text, target, aspect):
         # text: 50 * 128
         batch_size = text.size()[1]
         text_embed = self.embedding(text)  # 50 * 128 * 300
-        target_embed = self.embedding(target)  # 128 * 300
-        aspect_embed = self.embedding(aspect)  # 128 * 300
+        target_embed = self.target_embedding(target)  # 128 * 300
+        aspect_embed = self.aspect_embedding(aspect)  # 128 * 300
+
+        tired_keys = torch.LongTensor([1, 2])
+        if self.config.cuda:
+            tired_keys = tired_keys.cuda()  # ['Location1', 'Location2']
+        tired_keys_embed = self.target_embedding(tired_keys)  # 2 * 300
+        keys_emb = tired_keys_embed
+        # keys_emb = torch.cat([tired_keys_embed, self.free_keys_embed], dim=0)  # 7 * 300
 
         # 参数初始化
-        h_fw = torch.randn(self.config.n_keys, batch_size, self.config.embedding_dim)  # 7 * 128 * 300
-        b_fw = torch.randn(self.config.n_keys, batch_size, self.config.embedding_dim)  # 7 * 128 * 300
+        h_fw = Variable(torch.zeros(self.config.n_keys, batch_size, self.config.embedding_dim))  # 7 * ? * 300
+        b_fw = Variable(torch.zeros(self.config.n_keys, batch_size, self.config.embedding_dim))  # 7 * 128 * 300
         if self.config.cuda:
             h_fw, b_fw = h_fw.cuda(), b_fw.cuda()
         h_bw = torch.randn(batch_size, self.config.embedding_dim)
         b_bw = torch.randn(batch_size, self.config.embedding_dim)
+        h_fw = Variable(torch.zeros(batch_size, self.config.embedding_dim))
         for text in text_embed:
-            h_fw, b_fw = self.ent_cell_fw(text, h_fw, b_fw)
+            h_fw = self.cell(text, h_fw)
+            # h_fw, b_fw = self.ent_cell_fw(text, h_fw, b_fw, keys_emb)
             # 双向后面再改
             # h_bw, b_bw = self.ent_cell_bw(h_bw, b_bw)
 
+        h_fw = [h_fw, h_fw]
         # p_j = softmax(k_j W_att [t a])
         last_h_fw = torch.cat([h.unsqueeze(1) for h in h_fw], dim=1)  # 128 * 7 * 300
         target_aspect = torch.cat([target_embed, aspect_embed], dim=1)  # 128 * 600
 
-        att = torch.mm(self.keys, self.W_att)
+        att = torch.mm(keys_emb, self.W_att)
         att = torch.mm(att, target_aspect.permute(1, 0)).permute(1, 0)  # 128 * 7
         att = F.softmax(att, dim=1)
 
         u = torch.sum(last_h_fw * att.unsqueeze(2), dim=1)  # 128 * 300
+
+        last_h_fw = h_fw  # 128 * 300
 
         # y = softmax(R (H u + a))
         hidden = self.c1(u)
@@ -101,11 +113,10 @@ class EntNet(nn.Module):
 
 
 class EntNetCell(nn.Module):
-    def __init__(self, num_blocks, num_unit_per_block, keys):
+    def __init__(self, num_blocks, num_unit_per_block):
         super(EntNetCell, self).__init__()
         self.num_blocks = num_blocks
         self.num_unit_per_block = num_unit_per_block  # 300
-        self.keys = keys
 
         self.U = nn.Parameter(torch.randn(self.num_unit_per_block, self.num_unit_per_block))
         self.V = nn.Parameter(torch.randn(self.num_unit_per_block, self.num_unit_per_block))
@@ -120,7 +131,7 @@ class EntNetCell(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
-    def forward(self, w, h, d):
+    def forward(self, w, h, d, keys):
         # w: batch * 300
         # h/d: 7 * batch * 300
         batch = w.size()[0]
@@ -128,7 +139,7 @@ class EntNetCell(nn.Module):
         new_d = []
         # 对2+5个记忆单元各进行一次计算
         for j, h_j in enumerate(h):
-            k_j = self.keys[j]
+            k_j = keys[j]
             candi_j = self.get_candidate(h_j, k_j, w, batch)  # batch * 300
 
             new_d_j = self.gru_cell(candi_j, d[j])

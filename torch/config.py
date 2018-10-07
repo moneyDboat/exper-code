@@ -12,7 +12,7 @@ class DefaultConfig(object):
     learning_rate = 0.05
     max_grad_norm = 5.0
     evaluation_interval = 1
-    batch_size = 128
+    batch_size = 256
     epochs = 50
     max_text_len = 50
     task = 'Sentihood'
@@ -24,19 +24,21 @@ class DefaultConfig(object):
     embedding_name = '6B'
     embedding_dim = 300
     embedding_update = False
-    case_folding = True
+    case_folding = True  # 大小写
     label_num = 2
 
     save_dir = 'tmp'
     id = 'test'
-    lr1 = 1e-3
+    lr1 = 5e-3
     lr2 = 0  # learning rate for embedding
+    lr_delay = 0.5
+    min_lr = 1e-6  # 衰减到最小学习率时退出训练
     max_epoch = 500
 
     vocab_size = 0
     target_vocab_size = 0
     aspect_vocab_size = 0
-    n_keys = 7
+    n_keys = 2
     n_tied = 2
     entnet_input_keep_prob = 0.8
     entnet_output_keep_prob = 1.0

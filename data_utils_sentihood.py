@@ -56,6 +56,8 @@ def load_task(data_dir, aspect2idx):
     in_file = os.path.join(data_dir, 'sentihood-test.json')
     test = parse_sentihood_json(in_file)
 
+    # 只保留4个aspect
+    # tokenize分词操作
     train = convert_input(train, aspect2idx)
     train_aspect_idx = get_aspect_idx(train, aspect2idx)
     train = tokenize(train)
@@ -92,6 +94,7 @@ def remove_replacement(data, replacement):
     return ret_data, ret_indices
 
 
+# 将所有单词转换成小写
 def lower_case(data):
     ret = []
     for sent_id, text, target, aspect, sentiment in data:
