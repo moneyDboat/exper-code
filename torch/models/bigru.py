@@ -21,7 +21,7 @@ def kmax_pooling(x, dim, k):
 
 
 class Bigru(nn.Module):
-    def __init__(self, config, vectors=None):
+    def __init__(self, config, vectors=None, target_vectors=None, aspect_vectors=None):
         super(Bigru, self).__init__()
         self.config = config
 
@@ -41,6 +41,7 @@ class Bigru(nn.Module):
             nn.Linear(config.embedding_dim * 2, config.embedding_dim),
             nn.BatchNorm1d(config.embedding_dim),
             nn.ReLU(inplace=True),
+            nn.Dropout(p=0.2),
             nn.Linear(config.embedding_dim, config.label_num)
         )
 

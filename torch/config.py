@@ -27,7 +27,9 @@ class DefaultConfig(object):
     case_folding = True  # 大小写
     label_num = 2
 
+    model = 'Bigru'  # 注意与model/__init__.py中名字相同
     save_dir = 'tmp'
+    env = 'test'
     id = 'test'
     lr1 = 1e-3
     lr2 = 0  # learning rate for embedding

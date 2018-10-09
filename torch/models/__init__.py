@@ -7,5 +7,6 @@
 """
 
 from .entnet import EntNet
-from .Bigru import Bigru
+from .bigru import Bigru
+from .bigru_aspect import Bigru_aspectn
 

@@ -9,16 +9,22 @@
 import torch
 import torch.nn.functional as F
 from config import DefaultConfig
-from model import EntNet
-from model import Bigru
+import models
 import fire
 import data
 import os
+import time
+from util import Visualizer
 
 
 def main(**kwargs):
+    start_time = time.time()
+
     config = DefaultConfig()
     config.parse(kwargs)
+
+    vis = Visualizer(config.env)
+
     if not torch.cuda.is_available():
         config.cuda = False
         config.device = None
@@ -31,8 +37,7 @@ def main(**kwargs):
     config.print_config()
 
     # init model
-    # model = EntNet(config, text_vectors, target_vectors, aspect_vectors)
-    model = Bigru(config, text_vectors)
+    model = getattr(models, config.model)(config, text_vectors, target_vectors, aspect_vectors)
     print(model)
 
     # 模型保存位置
@@ -78,40 +83,50 @@ def main(**kwargs):
             total += label.size(0)
             correct += predicted.eq(label).sum().item()
 
-            print('[{}, {}] loss: {:.5f} | Acc: {:.3f}%({}/{})'.format(i + 1, idx + 1, total_loss / 5,
-                                                                       100. * correct / total, correct, total))
-            total_loss = 0.0
+        # 每个batch之后计算测试集上的准确率
+        print('[Epoch {}] loss: {:.5f} | Acc: {:.3f}%({}/{})'.format(i + 1, total_loss,
+                                                                     100. * correct / total, correct, total))
+        vis.plot('loss', total_loss)
 
-        # 计算验证集上的分数(准确率)，并相应调整学习率
-        acc, acc_n, val_n = val(model, val_iter, config)
-        print('Epoch {} Val Acc: {:.3f}%({}/{})'.format(i+1, acc, acc_n, val_n))
-        # if acc >= best_acc:
-        #     best_acc = acc
-        #     checkpoint = {
-        #         'state_dict': model.state_dict(),
-        #         'config': config
-        #     }
-        #     torch.save(checkpoint, tmp_save_path)
-        #     # print('Best tmp model acc: {:.3f}%'.format(best_acc))
-        # if acc < best_acc:
-        #     model.load_state_dict(torch.load(tmp_save_path)['state_dict'])
-        #     lr1 *= config.lr_delay
-        #     optimizer = model.get_optimizer(lr1, lr2)
-        #     print('## load previous best model: {:.3f}%'.format(best_acc))
-        #     print('## set model lr1 to {}'.format(lr1))
-        #     if lr1 < config.min_lr:
-        #         print('## training over, best f1 acc : {:.3f}'.format(best_acc))
-        #         break
+        # 每5个epoch计算验证集上的准确率，并相应调整学习率
+        if i % 5 == 4:
+            acc, acc_n, val_n = val(model, val_iter, config)
+            vis.plot('val_acc', acc)
+            print('Epoch {} Val Acc: {:.3f}%({}/{})'.format(i + 1, acc, acc_n, val_n))
+            # 100个epoch之后模型接近收敛，此时开始调整学习率
+            # 因为数据集偏小，100个epoch之前虽然整体呈下降趋势，但会有小幅度波动，此时调整学习率可能会影响模型收敛
+            if i > 100:
+                if acc >= best_acc:
+                    best_acc = acc
+                    checkpoint = {
+                        'state_dict': model.state_dict(),
+                        'config': config
+                    }
+                    torch.save(checkpoint, tmp_save_path)
+                # if acc < best_acc:
+                #     model.load_state_dict(torch.load(tmp_save_path)['state_dict'])
+                    # lr1 *= config.lr_delay
+                    # optimizer = model.get_optimizer(lr1, lr2)
+                    # print('## load previous best model: {:.3f}%'.format(best_acc))
+                    # print('## set model lr1 to {}'.format(lr1))
+                    # if lr1 < config.min_lr:
+                    #     print('## training over, best f1 acc : {:.3f}'.format(best_acc))
+                    #     break
 
-        # 计算测试集上分数(准确率)
-        test_acc, test_acc_n, test_n = val(model, test_iter, config)
-        print('Epoch {} Test Acc: {:.3f}%({}/{})'.format(i+1, test_acc, test_acc_n, test_n))
+            # 计算测试集上分数(准确率)
+            test_acc, test_acc_n, test_n = val(model, test_iter, config)
+            vis.plot('test_acc', test_acc)
+            print('Epoch {} Test Acc: {:.3f}%({}/{})\n'.format(i + 1, test_acc, test_acc_n, test_n))
 
+    # 加载训练过程中保存的验证集最佳模型
     # 计算最终训练模型的测试集准确率
-    # 并保存模型
+    model.load_state_dict(torch.load(tmp_save_path)['state_dict'])
+    print('Load tmp best model from {}'.format(tmp_save_path))
     test_acc, test_acc_n, test_n = val(model, test_iter, config)
     print('Finally Test Acc: {:.3f}%({}/{})'.format(test_acc, test_acc_n, test_n))
-    print('Best final model saved in {}'.format('{:.3f}_{}'.format(test_acc, tmp_save_path)))
+    # print('Best final model saved in {}'.format('{:.3f}_{}'.format(test_acc, tmp_save_path)))
+
+    print('Final cost time : {}s'.format(time.time() - start_time))
 
 
 # 计算模型在验证集/测试集上的结果(准确率)
